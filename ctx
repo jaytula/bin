@@ -1,0 +1,80 @@
+#!/bin/bash
+
+# Default values
+DEFAULT_SIZE_LIMIT=20000 # 20K in bytes
+SIZE_LIMIT=$DEFAULT_SIZE_LIMIT
+EXTENSIONS=""
+
+# --- Function to display script usage ---
+usage() {
+  echo "Usage: $0 [--ext <extensions>] [--size <size_in_bytes>]"
+  echo
+  echo "Options:"
+  echo "  --ext   Comma-separated list of file extensions to include (e.g., \"txt,php,md\")."
+  echo "          If not provided, all non-binary files are considered."
+  echo "  --size  Maximum file size in bytes. Defaults to 20000 (20K)."
+  echo "  -h, --help  Display this help message."
+  exit 1
+}
+
+# --- Parse command-line arguments ---
+while [[ "$#" -gt 0 ]]; do
+  case $1 in
+    --ext)
+      EXTENSIONS="$2"
+      shift
+      ;;
+    --size)
+      SIZE_LIMIT="$2"
+      shift
+      ;;
+    -h | --help)
+      usage
+      ;;
+    *)
+      echo "Unknown parameter passed: $1"
+      usage
+      ;;
+  esac
+  shift
+done
+
+# --- Find and process files ---
+find_command="find . -not -path '*/\.*' -type f -size -${SIZE_LIMIT}c"
+
+# If specific extensions are provided, add them to the find command
+if [ -n "$EXTENSIONS" ]; then
+  IFS=',' read -ra EXT_ARRAY <<< "$EXTENSIONS"
+  find_conditions=""
+  for ext in "${EXT_ARRAY[@]}"; do
+    if [ -z "$find_conditions" ]; then
+      find_conditions="-name \"*.$ext\""
+    else
+      find_conditions="$find_conditions -o -name \"*.$ext\""
+    fi
+  done
+  find_command="$find_command \( $find_conditions \)"
+fi
+
+# Execute the find command and pipe the results to the while loop
+eval "$find_command" | while read -r file; do
+  # Exclude binary files based on their mime encoding
+  if ! file -b --mime-encoding "$file" | grep -q "binary"; then
+    # Get file extension for syntax highlighting
+    filename=$(basename -- "$file")
+    extension="${filename##*.}"
+
+    if [ "$filename" = "$extension" ]; then
+      lang_identifier=$(echo "$filename" | tr '[:upper:]' '[:lower:]')
+    else
+      lang_identifier=$(echo "$extension" | tr '[:upper:]' '[:lower:]')
+    fi
+
+    echo "--- File: $file ---"
+    echo "\`\`\`${lang_identifier}"
+    # Use echo with command substitution to ensure a trailing newline
+    echo "$(cat "$file")"
+    echo "\`\`\`"
+    echo
+  fi
+done
