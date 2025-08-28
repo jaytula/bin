@@ -1,0 +1,18 @@
+#!/bin/bash
+
+config_file="$HOME/.ssh/config"
+
+search_string="Host hemi-stage-instance"
+replacement_string="  Hostname $(curl -s https://hemi-sync.cloud/instance-ip.php)"
+
+echo Updating to staging to: $replacement_string
+# Use sed to search for the line and replace the following line
+sed -i '' -e "/$search_string/{n;s|.*|$replacement_string|;}" "$config_file"
+
+
+search_string="Host hemi-prod-instance"
+replacement_string="  Hostname $(curl -s https://hemi-sync.com/instance-ip.php)"
+
+echo Updating to production to: $replacement_string
+# Use sed to search for the line and replace the following line
+sed -i '' -e "/$search_string/{n;s|.*|$replacement_string|;}" "$config_file"

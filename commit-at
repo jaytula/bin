@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Get the operating system name
+OS=$(uname -s)
+
+if [[ "$OS" == "Darwin" ]]; then
+  DATE=$(gdate --date="$1")
+else
+  DATE=$(date --date"$1")
+fi
+
+GIT_AUTHOR_DATE="$DATE" GIT_COMMITTER_DATE="$DATE" git commit -m "$2"
